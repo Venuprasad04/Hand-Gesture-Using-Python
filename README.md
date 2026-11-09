@@ -1,212 +1,243 @@
-# 🤟 Hand Gesture to Speech System
+# Hand Gesture to Speech
 
-A real-time **Hand Gesture to Text and Speech Recognition System** built using **Python, MediaPipe, OpenCV, Scikit-learn, and Text-to-Speech**.
+**A real-time assistive communication system that converts webcam hand gestures into text and spoken sentences.**
 
-The project recognizes predefined hand gestures through a webcam, converts them into text, combines multiple gestures into meaningful sentences, and produces voice output.
+![Python](https://img.shields.io/badge/Python-3.9%E2%80%933.12-3776AB?logo=python&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8?logo=opencv&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-Hand%20Landmarker-0097A7)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-ML%20Classifier-F7931E?logo=scikitlearn&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
 
-For example:
+```text
+I  →  NEED  →  WATER   =   "I need water"   →   🔊 Speech output
+```
 
-`I → NEED → WATER → "I need water" → 🔊 Speech Output`
-
----
-
-## 📌 Project Overview
-
-Communication can be difficult for people with speech impairments. This project aims to provide a simple assistive communication system where hand gestures are recognized using computer vision and machine learning.
-
-The detected gestures are converted into readable text and then spoken aloud using a Text-to-Speech engine.
-
-The system currently supports gesture-based phrases such as:
-
-- I
-- Need
-- Water
-- Love
-- You
-
-Example sentences:
-
-- **I need water**
-- **I love you**
+<!-- Add a screenshot or demo GIF here (recommended):
+<p align="center"><img src="docs/demo.gif" alt="Live demo" width="640"></p>
+-->
 
 ---
 
-## ✨ Features
+## Table of Contents
 
-- 🎥 Real-time hand gesture recognition using webcam
-- ✋ Hand landmark detection using MediaPipe
-- 🤖 Machine Learning based gesture classification
-- 📝 Gesture-to-text conversion
-- 🔊 Text-to-Speech output
-- 🧠 Multiple gesture combination to form sentences
-- ⚡ Real-time prediction
-- 📊 Custom gesture dataset collection
-- 💾 Trained model saved using Joblib
-- 🎯 Confidence threshold for reliable predictions
-- 🔁 Stable-frame detection to reduce incorrect predictions
+- [Overview](#overview)
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Model Performance](#model-performance)
+- [Limitations](#limitations)
+- [Roadmap](#roadmap)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+- [Author](#author)
 
 ---
 
-## 🛠️ Technologies Used
+## Overview
+
+Communication can be difficult for people with speech impairments. This project provides a simple, low-cost assistive tool: it watches a webcam, recognizes predefined hand gestures with computer vision and machine learning, chains them into sentences, and speaks the result aloud.
+
+The system currently recognizes gestures for **I**, **Need**, **Water**, **Love** and **You**, which combine into sentences such as:
+
+- *I need water*
+- *I love you*
+
+Beyond assistive communication, the same pipeline applies to human-computer interaction, accessibility technology and sign language research.
+
+---
+
+## Features
+
+- **Real-time recognition** from a standard webcam
+- **Hand landmark detection** with MediaPipe (21 points per hand, up to two hands)
+- **Machine-learning classification** with a scikit-learn model
+- **Sentence building** by chaining multiple gestures
+- **Text-to-speech output** through Windows SAPI
+- **Custom dataset collection** tool for adding your own gestures
+- **Reliable predictions** through a confidence threshold and stable-frame detection
+- **Persistent models** saved and loaded with Joblib
+
+---
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A["Webcam<br/>(OpenCV)"] --> B["Hand Landmarker<br/>(MediaPipe)"]
+    B --> C["Feature Extraction<br/>& Normalization"]
+    C --> D["Gesture Classifier<br/>(scikit-learn)"]
+    D --> E{"Confident<br/>& stable?"}
+    E -- No --> A
+    E -- Yes --> F["Sentence Builder"]
+    F --> G["Text-to-Speech<br/>(Windows SAPI)"]
+```
+
+1. **Capture:** OpenCV reads frames from the webcam.
+2. **Detect:** MediaPipe Hand Landmarker finds each hand and returns 21 landmarks.
+3. **Extract and normalize:** landmarks become a fixed-length numeric feature vector (details below).
+4. **Classify:** the trained scikit-learn model predicts the gesture and a confidence score.
+5. **Validate:** a prediction is accepted only if it exceeds the confidence threshold and stays the same for several consecutive frames.
+6. **Build the sentence:** accepted gestures are stored in order (`I` → `NEED` → `WATER`).
+7. **Speak:** the final sentence is passed to the Windows text-to-speech engine.
+
+### Feature vector
+
+| Property | Value |
+|---|---|
+| Landmarks per hand | 21 |
+| Values per landmark | 2 (normalized `x`, `y`) |
+| Features per hand | 42 |
+| Total vector length | **84** (left hand 42 + right hand 42) |
+| Missing hand | Filled with zeros |
+| Origin | Mean wrist position of the visible hand(s) |
+| Scale | Largest `x`/`y` span across all visible landmarks |
+
+Centering on the wrist and scaling by hand size makes recognition far less sensitive to **where** the hand is in the frame and **how far** it is from the camera.
+
+---
+
+## Tech Stack
 
 | Technology | Purpose |
 |---|---|
-| Python | Main programming language |
-| OpenCV | Webcam capture and image processing |
+| Python | Core language |
+| OpenCV | Webcam capture and drawing |
 | MediaPipe | Hand landmark detection |
-| Scikit-learn | Machine Learning model training |
+| scikit-learn | Gesture classification model |
 | NumPy | Numerical operations |
 | Pandas | Dataset handling |
-| Joblib | Saving and loading trained ML models |
-| Windows SAPI | Text-to-Speech output |
-| PyWin32 | Accessing Windows speech services |
+| Joblib | Saving and loading trained models |
+| Windows SAPI + PyWin32 | Text-to-speech output |
 
 ---
 
-## 🧠 How It Works
-
-The project follows the pipeline:
-
-### 1. Webcam Input
-
-The webcam continuously captures video frames using OpenCV.
-
-### 2. Hand Detection
-
-MediaPipe Hand Landmarker detects the hand and extracts hand landmarks.
-
-Each hand contains **21 landmark points**.
-
-### 3. Feature Extraction
-
-The landmark coordinates are converted into numerical feature vectors.
-
-These values represent the position of different parts of the hand.
-
-### 4. Normalization
-
-The landmark coordinates are normalized so that gesture recognition is less affected by:
-
-- Hand position
-- Distance from camera
-- Slight movement variations
-
-### 5. Gesture Classification
-
-The trained Scikit-learn machine learning model receives the feature vector and predicts the gesture.
-
-Example:
-
-`Hand Landmarks → ML Model → "WATER"`
-
-### 6. Sentence Formation
-
-Recognized gestures are stored sequentially.
-
-Example:
-
-`I`
-
-↓
-
-`NEED`
-
-↓
-
-`WATER`
-
-↓
-
-`I NEED WATER`
-
-### 7. Text-to-Speech
-
-The final sentence is passed to the Windows Text-to-Speech engine.
-
-Output:
-
-🔊 **"I need water"**
-
----
-
-## 📂 Project Structure
+## Project Structure
 
 ```text
 hand-gesture-to-speech/
+├── Utilis.py              # Shared utilities (landmarker, features, drawing)
+├── data_collection.py     # Record gesture samples from the webcam
+├── train_model.py         # Train and save the classifier
+├── gesture_to_speech.py   # Main real-time application
 │
-├── Utilis.py
-├── data_collection.py
-├── train_model.py
-├── gesture_to_speech.py
-│
-├── gesture_data.csv
-├── gesture_model.joblib
-├── gesture_labels.joblib
-├── hand_landmarker.task
+├── gesture_data.csv       # Collected dataset (generated)
+├── gesture_model.joblib   # Trained model (generated)
+├── gesture_labels.joblib  # Label mapping (generated)
+├── hand_landmarker.task   # MediaPipe model (downloaded automatically)
 │
 ├── requirements.txt
 ├── README.md
 └── .gitignore
 ```
 
-### File Description
-
-**Utilis.py**
-
-Contains common utility functions such as:
-
-- Creating MediaPipe Hand Landmarker
-- Drawing hand landmarks
-- Converting landmarks into feature vectors
-- Converting OpenCV frames to MediaPipe image format
-
-**data_collection.py**
-
-Used to collect hand gesture samples through the webcam.
-
-The collected landmark values are stored in:
-
-```text
-gesture_data.csv
-```
-
-**train_model.py**
-
-Loads the collected dataset and trains the machine learning model using Scikit-learn.
-
-The trained files are saved as:
-
-```text
-gesture_model.joblib
-gesture_labels.joblib
-```
-
-**gesture_to_speech.py**
-
-Main application used for:
-
-- Real-time gesture recognition
-- Gesture prediction
-- Sentence formation
-- Text-to-Speech output
+| File | Role |
+|---|---|
+| `Utilis.py` | Creates the MediaPipe Hand Landmarker, converts OpenCV frames to MediaPipe images, builds normalized feature vectors and draws hand landmarks. |
+| `data_collection.py` | Records labeled landmark samples into `gesture_data.csv`. |
+| `train_model.py` | Loads the dataset, trains the classifier and saves `gesture_model.joblib` and `gesture_labels.joblib`. |
+| `gesture_to_speech.py` | Runs live recognition, sentence formation and speech output. |
 
 ---
 
-## 📊 Model Performance
+## Getting Started
 
-During initial training with gestures such as:
+### Prerequisites
 
-- I
-- Need
-- Water
+- Windows 10 or 11 (required for the Windows SAPI speech output)
+- Python 3.9 – 3.12
+- A working webcam
 
-The model achieved approximately:
+### Installation
 
-```text
-Accuracy: 99%
+```bash
+# 1. Clone the repository
+git clone https://github.com/Venuprasad04/hand-gesture-to-speech.git
+cd hand-gesture-to-speech
+
+# 2. Create and activate a virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
 ```
 
-Example classification results:
+Or install the packages directly:
+
+```bash
+pip install opencv-python mediapipe numpy pandas scikit-learn joblib pywin32
+```
+
+> The MediaPipe `hand_landmarker.task` model is downloaded automatically on first run. If you are offline, see [Troubleshooting](#troubleshooting).
+
+---
+
+## Usage
+
+### 1. Collect gesture data
+
+```bash
+python data_collection.py
+```
+
+| Key | Action |
+|---|---|
+| `0`–`9` | Select the gesture to record |
+| `SPACE` | Start / stop recording |
+| `Q` | Quit |
+
+Samples are saved to `gesture_data.csv`. Record each gesture from slightly different distances, angles and lighting conditions for best results.
+
+### 2. Train the model
+
+```bash
+python train_model.py
+```
+
+This trains the classifier and writes `gesture_model.joblib` and `gesture_labels.joblib`.
+
+### 3. Run the application
+
+```bash
+python gesture_to_speech.py
+```
+
+The webcam opens and recognition starts. Example session:
+
+```text
+Gesture 1: I
+Gesture 2: NEED
+Gesture 3: WATER
+
+Sentence: I NEED WATER
+🔊 "I need water"
+```
+
+---
+
+## Configuration
+
+| Setting | Default | Location | Effect |
+|---|---:|---|---|
+| `CONFIDENCE_THRESHOLD` | `0.60` | `gesture_to_speech.py` | Minimum model confidence to accept a prediction. |
+| `STABLE_FRAMES_REQUIRED` | `4` | `gesture_to_speech.py` | Consecutive frames a gesture must hold before it is accepted. |
+| `min_hand_detection_confidence` | `0.65` | `Utilis.py` | MediaPipe palm-detection threshold. |
+| `min_hand_presence_confidence` | `0.65` | `Utilis.py` | MediaPipe hand-presence threshold. |
+| `min_tracking_confidence` | `0.65` | `Utilis.py` | MediaPipe tracking threshold. |
+| `num_hands` | `2` | `Utilis.py` | Maximum hands detected per frame. |
+
+**Tuning tip:** if predictions flicker or fire accidentally, raise `CONFIDENCE_THRESHOLD` or `STABLE_FRAMES_REQUIRED`. If the system feels slow to respond, lower them.
+
+---
+
+## Model Performance
+
+Results from the initial training run on the **I**, **Need** and **Water** gestures:
 
 | Gesture | Precision | Recall | F1 Score |
 |---|---:|---:|---:|
@@ -214,229 +245,82 @@ Example classification results:
 | Need | 1.00 | 0.99 | 0.99 |
 | Water | 0.97 | 1.00 | 0.99 |
 
-Overall model accuracy:
+**Overall accuracy: ~99%**
 
-**99%**
-
-> Performance may vary depending on lighting conditions, hand position, camera quality, dataset size, and user variation.
+> Accuracy depends on lighting, camera quality, hand position, dataset size and the user. Results on a new person or a new environment may be lower than on the data the model was trained on, so retrain with samples from your own setup.
 
 ---
 
-## ⚙️ Installation
+## Limitations
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/hand-gesture-to-speech.git
-```
-
-Move into the project folder:
-
-```bash
-cd hand-gesture-to-speech
-```
+- **Windows only for speech:** text-to-speech uses Windows SAPI. The recognition pipeline itself is cross-platform.
+- **Fixed vocabulary:** only the gestures present in the training data are recognized.
+- **Static gestures:** each gesture is classified from a single pose, so motion-based signs are not supported yet.
+- **Environment sensitivity:** poor lighting, busy backgrounds or partially hidden hands reduce accuracy.
+- **Not a complete sign language translator.** It is a gesture-driven communication aid.
 
 ---
 
-### 2. Create a Virtual Environment
+## Roadmap
 
-```bash
-python -m venv venv
-```
-
-Activate it on Windows:
-
-```bash
-venv\Scripts\activate
-```
-
----
-
-### 3. Install Required Libraries
-
-```bash
-pip install opencv-python mediapipe numpy pandas scikit-learn joblib pywin32
-```
-
-Or install using:
-
-```bash
-pip install -r requirements.txt
-```
+- [ ] Larger gesture vocabulary
+- [ ] Two-hand gesture vocabulary (the feature pipeline already supports two hands)
+- [ ] Dynamic (motion-based) gestures with LSTM/CNN models
+- [ ] Full sign language recognition
+- [ ] Cross-platform text-to-speech
+- [ ] Multilingual speech output
+- [ ] Automatic sentence generation
+- [ ] Emergency communication mode
+- [ ] Web and Android versions
+- [ ] Integration with smart assistive devices
 
 ---
 
-## 📥 Dataset Collection
+## Troubleshooting
 
-Run:
+**The webcam does not open**
+Close other apps that use the camera. If you have several cameras, change the index passed to `cv2.VideoCapture`.
 
-```bash
-python data_collection.py
-```
+**`ModuleNotFoundError: No module named 'win32com'`**
+Install PyWin32: `pip install pywin32`.
 
-Use the configured controls to select a gesture and record training samples.
-
-Example controls:
+**The model download fails (offline or blocked network)**
+Download the file manually and place it in the project root as `hand_landmarker.task`:
 
 ```text
-0-9   → Select gesture
-SPACE → Start/Stop recording
-Q     → Quit
+https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
 ```
 
-The recorded gesture landmarks will be saved in:
+**Predictions are inaccurate**
+Record more samples per gesture in varied lighting, distances and angles, then run `train_model.py` again.
 
-```text
-gesture_data.csv
-```
+**Gestures trigger by accident**
+Increase `CONFIDENCE_THRESHOLD` or `STABLE_FRAMES_REQUIRED` (see [Configuration](#configuration)).
 
 ---
 
-## 🧪 Train the Model
+## Contributing
 
-After collecting enough samples, run:
-
-```bash
-python train_model.py
-```
-
-The program trains the machine learning classifier and saves the trained model.
-
-Generated files:
-
-```text
-gesture_model.joblib
-gesture_labels.joblib
-```
-
----
-
-## ▶️ Run the Application
-
-Run:
-
-```bash
-python gesture_to_speech.py
-```
-
-The webcam will open and start detecting hand gestures.
-
-Example:
-
-```text
-Gesture 1: I
-
-Gesture 2: NEED
-
-Gesture 3: WATER
-
-Sentence: I NEED WATER
-```
-
-The computer will then speak:
-
-🔊 **"I need water"**
-
----
-
-## 🎯 Prediction Stability
-
-To avoid accidental predictions, the system uses a confidence threshold and stable-frame detection.
-
-Example configuration:
-
-```python
-CONFIDENCE_THRESHOLD = 0.60
-STABLE_FRAMES_REQUIRED = 4
-```
-
-A gesture must remain stable for multiple frames before being accepted.
-
-This helps reduce false detections.
-
----
-
-## 🔮 Future Improvements
-
-Future versions of this project can include:
-
-- Larger gesture vocabulary
-- Complete sign language recognition
-- Dynamic gesture recognition
-- LSTM/CNN based gesture recognition
-- Two-hand gesture recognition
-- Multiple-user training
-- Mobile application integration
-- Android support
-- Web-based gesture recognition
-- Cloud-based speech processing
-- Multilingual speech output
-- Automatic sentence generation
-- Emergency communication mode
-- Integration with smart assistive devices
-
----
-
-## 🌍 Applications
-
-This project can be useful in:
-
-- Assistive communication systems
-- Speech-impaired communication
-- Human-computer interaction
-- Smart healthcare systems
-- Sign language interpretation
-- Emergency communication
-- Accessibility technology
-- AI-powered assistive devices
-
----
-
-## 🎓 Learning Outcomes
-
-Through this project, concepts such as the following are explored:
-
-- Computer Vision
-- Machine Learning
-- Hand Landmark Detection
-- Feature Extraction
-- Data Collection
-- Data Preprocessing
-- Model Training
-- Classification
-- Real-time Prediction
-- Text-to-Speech
-- Human-Computer Interaction
-
----
-
-## 🤝 Contribution
-
-Contributions, suggestions, and improvements are welcome.
-
-You can:
+Contributions, bug reports and suggestions are welcome.
 
 1. Fork the repository
-2. Create a new branch
-3. Make your changes
-4. Commit your changes
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m "Add your feature"`
+4. Push the branch: `git push origin feature/your-feature`
 5. Open a Pull Request
 
 ---
 
-## 📜 License
+## License
 
-This project is developed for educational and research purposes.
+This project is developed for educational and research purposes. See the `LICENSE` file for details if one is included.
 
 ---
 
-## 👨‍💻 Author
+## Author
 
-Developed as an **AI/ML and Computer Vision project** focused on creating an accessible communication system using hand gesture recognition.
+Developed by **[Venuprasad S K]** as an AI/ML and Computer Vision project focused on accessible communication through hand gesture recognition.
 
+If you find this project useful, please consider giving it a ⭐ on GitHub.
 
-## ⭐ Support
-
-If you find this project useful, consider giving the repository a **⭐ Star**.
-
-It helps support the project and future improvements.
+**Acknowledgements:** [MediaPipe](https://developers.google.com/mediapipe), [OpenCV](https://opencv.org/) and [scikit-learn](https://scikit-learn.org/).
